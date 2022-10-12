@@ -1,27 +1,26 @@
 #!/usr/bin/python3
-"""This script lists all State objects from the database hbtn_0e_6_usa
-   Usage:  ./11-model_state_update_id.py   <mysql username> /
-                                           <mysql password> /
-                                           <database name>
 """
-
+Lists all State objects and corresponding City objects contained in the DB
+"""
+import sys
+from relationship_state import Base, State
+from relationship_city import City
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from model_state import State, Base
-from sys import argv
 
-if __name__ == "__main__":
-    if len(argv) != 4:
-        print("Usage: {} username password database".format(argv[0]))
-        exit(1)
 
-    username, password, db = argv[1], argv[2], argv[3]
+if __name__ == '__main__':
+    engine = create_engine('mysql+mysqldb://{}:{}@localhost:3306/{}'.
+                           format(sys.argv[1], sys.argv[2], sys.argv[3]),
+                           pool_pre_ping=True)
+    Base.metadata.create_all(engine)
 
-    engine = create_engine(
-        'mysql+mysqldb://{}:{}@localhost/{}'.format(username, password, db),
-        pool_pre_ping=True)
     Session = sessionmaker(bind=engine)
     session = Session()
-    state = session.query(State).filter_by(id=2).first()
-    state.name = "New Mexico"
-    session.commit()
+
+    st = session.query(State).outerjoin(City).order_by(State.id, City.id).all()
+
+    for state in st:
+        print("{}: {}".format(state.id, state.name))
+        for city in state.cities:
+            print("    {}: {}".format(city.id, city.name))
